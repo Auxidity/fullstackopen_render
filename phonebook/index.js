@@ -1,7 +1,14 @@
+require('dotenv').config();
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
+const Persons = require('./models/person')
+
+
+app.use(express.static('dist'))
+app.use(express.json())
+app.use(cors())
 
 morgan.token('body' , (request) => {
     if (request.method == 'POST' && request.body) {
@@ -10,77 +17,37 @@ morgan.token('body' , (request) => {
     return '';
 });
 
-app.use(cors())
-app.use(express.static('dist'))
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
-
-app.use(express.json())
-
-const maxId = 1000000; //Upper boundary for unique id's. Used for generateId() and returning an error when maxID is reached.
-
-let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
 
 app.get('/', (request, response) => {
     response.send('<h1>Hello</h1>')
 })
 
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+    Persons.find({}).then(persons => {
+        response.json(persons)
+    })
 })
 
-app.get('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    const person = persons.find(person => person.id === id)
-    if (person) {
-        response.json(person)
-    } else {
-        response.status(404).end()
-    }
+app.get('/api/persons/:id', (request, response, next) => {
+    Persons.findById(request.params.id)
+        .then(person => {
+            if(person) {
+                response.json(person)
+            } else {
+                response.status(404).end()
+            }
+        })
+        .catch(error => next(error))
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    persons = persons.filter(person => person.id !== id)
-    response.status(204).end()
+app.delete('/api/persons/:id', (request, response, next) => {
+    Persons.findByIdAndDelete(request.params.id)
+        .then(result => {
+            response.status(204).end()
+        })
+        .catch(error => next(error))
 })
-
-const generateId = () => { //Recursion depth becomes an issue with large amount of id's when we're almost full on id's. Since uniqueness of the id's wasn't a requirement but instead self imposed, I won't spend more time creating something more robust. (Which would involve some additional steps after reaching certain recursion depth)
-    const generateRandom = () => Math.floor(Math.random() * maxId) + 1; //We right shift by one. Math.random() is generating between 0-1 range, but the value of 1 is excluded from the range. This means that if maxId = 4, the possible range isn't 0-4 but 0-3 instead. We wan't the lower end to start from 1 and upper bound to mirror maxId, so right shifting by 1 is neccesary.
-    
-    const generateUnique = () => {
-        const newId = generateRandom().toString();
-
-        if (persons.some(person => person.id === newId)) {
-            return generateUnique();
-        }
-
-        return newId;
-    }
-
-    return String(generateUnique())
-
-}
 
 app.post('/api/persons', (request, response) => {
     const body = request.body
@@ -90,38 +57,58 @@ app.post('/api/persons', (request, response) => {
         })
     }
 
-    if (persons.some(person => person.name === body.name)) {
-        return response.status(400).json({
-            error: 'Name already exists in phonebook'
-        })
-    }
+    const person = new Persons ({
+        name: body.name,
+        number: body.number
+    })
 
-    if (persons.length === maxId) {
-        return response.status(400).json({
-            error: 'Phonebook is full'
-        })
-    }
+    person.save().then(savedPerson => {
+        response.json(savedPerson)
+    })
+})
 
-    const { name,  number } = body;
+app.put('/api/persons/:id', (request, response, next) =>{
+    const body = request.body
 
     const person = {
-        id: generateId(),
-        name: name,
-        number: number,
+        name: body.name,
+        number: body.number,
     }
-    persons = persons.concat(person)
 
-    response.json(person)
+    Persons.findByIdAndUpdate(request.params.id, person, {new: true })
+        .then(updatedPerson => {
+            response.json(updatedPerson)
+        })
+        .catch(error => next(error))
 })
 
 app.get('/info', (request, response) => {
     const date = new Date().toString();
 
-    const length = persons.length;
+    const length = Persons.length;
     response.send(`<p>Phonebook has info for ${length} people</p><p>${date}</p>`);
 })
 
-const PORT = process.env.PORT || 6969
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint'})
+}
+
+app.use(unknownEndpoint)
+
+const errorHandler = (error, request, response, next) => {
+    console.log(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformed id' })
+    }
+
+    next(error)
+}
+
+app.use(errorHandler)
+
+
+const PORT = process.env.PORT
 app.listen(PORT, () => {
 console.log(`Server running on port ${PORT}`)
 })
