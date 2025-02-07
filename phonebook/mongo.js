@@ -5,6 +5,11 @@ if (process.argv.length<3) {
   process.exit(1)
 }
 
+if (process.argv.length > 5) {
+    console.log('too many arguments given.')
+    process.exit(1)
+}
+
 const password = process.argv[2]
 const url =`mongodb+srv://auxidity:${password}@cluster0.dwrzw.mongodb.net/phonebookApp?retryWrites=true&w=majority&appName=Cluster0`
 
