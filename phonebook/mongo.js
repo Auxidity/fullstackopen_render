@@ -1,8 +1,8 @@
 const mongoose = require('mongoose')
 
 if (process.argv.length<3) {
-  console.log('give password as argument')
-  process.exit(1)
+    console.log('give password as argument')
+    process.exit(1)
 }
 
 if (process.argv.length > 5) {
@@ -22,8 +22,8 @@ if (process.argv.length > 3 && process.argv.length < 5) {
 }
 
 const personSchema = new mongoose.Schema({
-  name: String,
-  number: String, //While int makes more sense, so far the numbers have been stored as Strings.
+    name: String,
+    number: String, //While int makes more sense, so far the numbers have been stored as Strings.
 })
 const Persons = mongoose.model('Persons', personSchema)
 
@@ -33,13 +33,13 @@ if (process.argv.length === 5) {
 
 
     const person = new Persons({
-      name: name,
-      number: number,
+        name: name,
+        number: number,
     })
 
-    person.save().then(result => {
-      console.log(`added ${name} number ${number} to phonebook`)
-      mongoose.connection.close()
+    person.save().then(() => {
+        console.log(`added ${name} number ${number} to phonebook`)
+        mongoose.connection.close()
     })
 
 

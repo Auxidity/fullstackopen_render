@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
@@ -11,19 +11,19 @@ app.use(express.json())
 app.use(cors())
 
 morgan.token('body' , (request) => {
-    if (request.method == 'POST' && request.body) {
-        return JSON.stringify(request.body);
+    if (request.method === 'POST' && request.body) {
+        return JSON.stringify(request.body)
     }
-    return '';
-});
+    return ''
+})
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
-app.get('/', (request, response) => {
+app.get('/', ( _, response) => {
     response.send('<h1>Hello</h1>')
 })
 
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', ( _, response) => {
     Persons.find({}).then(persons => {
         response.json(persons)
     })
@@ -43,7 +43,7 @@ app.get('/api/persons/:id', (request, response, next) => {
 
 app.delete('/api/persons/:id', (request, response, next) => {
     Persons.findByIdAndDelete(request.params.id)
-        .then(result => {
+        .then(() => {
             response.status(204).end()
         })
         .catch(error => next(error))
@@ -60,10 +60,10 @@ app.post('/api/persons', (request, response, next) => {
     person.save().then(savedPerson => {
         response.json(savedPerson)
     })
-    .catch(error => next(error))
+        .catch(error => next(error))
 })
 
-app.put('/api/persons/:id', (request, response, next) =>{
+app.put('/api/persons/:id', (request, response, next) => {
     const body = request.body
 
     const person = {
@@ -74,7 +74,7 @@ app.put('/api/persons/:id', (request, response, next) =>{
     Persons.findByIdAndUpdate(
         request.params.id,
         person,
-        {new: true, runValidators: true, context: 'query' }
+        { new: true, runValidators: true, context: 'query' }
     )
         .then(updatedPerson => {
             response.json(updatedPerson)
@@ -82,20 +82,20 @@ app.put('/api/persons/:id', (request, response, next) =>{
         .catch(error => next(error))
 })
 
-app.get('/info', (request, response) => {
-    const date = new Date().toString();
+app.get('/info', ( _, response) => {
+    const date = new Date().toString()
 
-    const length = Persons.length;
-    response.send(`<p>Phonebook has info for ${length} people</p><p>${date}</p>`);
+    const length = Persons.length
+    response.send(`<p>Phonebook has info for ${length} people</p><p>${date}</p>`)
 })
 
-const unknownEndpoint = (request, response) => {
-    response.status(404).send({ error: 'unknown endpoint'})
+const unknownEndpoint = ( _, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
 }
 
 app.use(unknownEndpoint)
 
-const errorHandler = (error, request, response, next) => {
+const errorHandler = (error, _ , response, next) => {
     console.log(error.message)
 
     if (error.name === 'CastError') {
@@ -113,6 +113,6 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {
-console.log(`Server running on port ${PORT}`)
+    console.log(`Server running on port ${PORT}`)
 })
 
